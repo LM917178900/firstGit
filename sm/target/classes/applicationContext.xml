@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop 
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+	<!-- 第一步：定义扫包规则 (修改包名，sql路径名)-->
+	<context:component-scan base-package="org.framestudy.sm"></context:component-scan>
+	<context:property-placeholder location="classpath:mysql.properties" ignore-unresolvable="true"/>
+	
+	<!-- 第二步：配置数据源（连接池） 在生产环境下，推荐使用：DBCP,C3P0，以及阿里巴巴提供的Druid-->
+	<!-- destory-method="close" 表示销毁容器时，需要先关闭连接池中所有的JDBC连接，释放连接资源 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="${jdbc.driverClassName}"></property>
+		<property name="url" value="${jdbc.url}"></property>
+		<property name="username" value="${jdbc.username}"></property>
+		<property name="password" value="${jdbc.password}"></property>
+		<property name="defaultAutoCommit" value="true"></property><!-- 自动提交 -->
+		<property name="initialSize" value="20"></property><!-- 初始化20个连接 -->
+		<property name="maxActive" value="50"></property><!-- 处于激活状态的最大连接数 -->
+		<property name="minIdle" value="1"></property><!-- 最小空闲数 -->
+		<property name="maxIdle" value="5"></property><!-- 最大空闲数 -->
+		<property name="numTestsPerEvictionRun" value="20"></property><!-- 每次回收空闲连接时，需要检查的池内连接数 -->
+		<property name="removeAbandonedTimeout" value="10"></property><!-- 连接超时时间 -->
+		<property name="removeAbandoned" value="true"></property><!-- 回收超时连接 -->
+		<property name="maxWait" value="1000"></property><!-- 单位：毫秒，超时等待时间 -->
+		<property name="validationQuery" value="select now() from dual"></property><!-- 通过查询数据库当前系统时间，来确保连接是正常的 -->
+	</bean>
+	
+	
+	<!-- 第三步：配置SessionFactory (修改包名，)-->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<!-- typeAliasesPackage 自动扫描取类别名，值里面如果由多个包，包间需要采用,或;间隔 -->
+		<property name="typeAliasesPackage" value="org.framestudy.sm.beans"></property>
+	</bean>
+	
+	<!-- 第四步：配置SQL映射器的扫描组件(修改包名；) -->
+	<bean id="mapperScanner" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<!-- basePackage 自动扫描Sql映射文件或者JAVA接口，值里面如果由多个包，包间需要采用,或;间隔 -->
+		<property name="basePackage" value="org.framestudy.sm.relationshipmag.mapper;org.framestudy.sm.usermag.mapper"></property>
+		<!-- 目的是将SQL映射器与Session进行关联 -->
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+	</bean>
+	
+	
+	<!-- 第五步：配置逻辑事务管理器 -->
+	<bean id="txManage" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	
+	
+	<!-- 第六步：配置Spring容器管理事务的2种手段 -->
+	<!-- Spring编程式事务管理方式，主要采用注解来进行管理 -->
+	<!-- <tx:annotation-driven transaction-manager="txManage"></tx:annotation-driven> -->
+	
+	<!-- Spring声明式事务管理方式，主要采用AOP来进行管理 -->
+	<tx:advice id="txAdvice" transaction-manager="txManage">
+        <tx:attributes>
+        	<tx:method name="*" read-only="true"/>
+            <tx:method name="save*" read-only="false" isolation="REPEATABLE_READ" rollback-for="java.lang.Exception" propagation="REQUIRED"/>
+            <tx:method name="add*" read-only="false" isolation="REPEATABLE_READ" rollback-for="java.lang.Exception" propagation="REQUIRED"/>
+            <tx:method name="insert*" read-only="false" isolation="REPEATABLE_READ" rollback-for="java.lang.Exception" propagation="REQUIRED"/>
+            <tx:method name="create*" read-only="false" isolation="REPEATABLE_READ" rollback-for="java.lang.Exception" propagation="REQUIRED"/>
+            
+            <tx:method name="update*" read-only="false" isolation="REPEATABLE_READ" rollback-for="java.lang.Exception" propagation="REQUIRED"/>
+            <tx:method name="modify*" read-only="false" isolation="REPEATABLE_READ" rollback-for="java.lang.Exception" propagation="REQUIRED"/>
+            <tx:method name="change*" read-only="false" isolation="REPEATABLE_READ" rollback-for="java.lang.Exception" propagation="REQUIRED"/>
+            
+            <tx:method name="delete*" read-only="false" isolation="REPEATABLE_READ" rollback-for="java.lang.Exception" propagation="REQUIRED"/>
+            <tx:method name="remove*" read-only="false" isolation="REPEATABLE_READ" rollback-for="java.lang.Exception" propagation="REQUIRED"/>
+            
+            <tx:method name="find*" read-only="true" propagation="NOT_SUPPORTED"/>
+            <tx:method name="get*" read-only="true" propagation="NOT_SUPPORTED"/>
+            <tx:method name="query*" read-only="true" propagation="NOT_SUPPORTED"/>
+            <tx:method name="search*" read-only="true" propagation="NOT_SUPPORTED"/>
+            <tx:method name="select*" read-only="true" propagation="NOT_SUPPORTED"/>
+            
+        </tx:attributes>
+    </tx:advice>
+    
+    
+    <aop:config>
+		<aop:pointcut expression="execution(* org.framestudy.sm.*mag.service.impl.*ServiceImpl.*(..))" id="serviceMethod"/>
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="serviceMethod"/>
+	</aop:config>
+	
+	<aop:aspectj-autoproxy></aop:aspectj-autoproxy>
+	
+	
+</beans>

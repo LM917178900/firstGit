@@ -4,6 +4,10 @@ import java.io.Serializable;
 
 public class StudentBean implements Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private Long id;
 	private String studentName;
 	private Integer age ;

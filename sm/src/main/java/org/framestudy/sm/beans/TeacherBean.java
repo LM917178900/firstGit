@@ -5,6 +5,10 @@ import java.util.List;
 
 public class TeacherBean implements Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private Long id;
 	private String teacherName;
 	private Integer age;
